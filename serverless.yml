@@ -1,0 +1,45 @@
+service: shortly
+provider:
+  name: aws
+  environment:
+    DYNAMODB_URLS_TABLE: urls
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+      Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.DYNAMODB_URLS_TABLE}"
+
+functions:
+  short:
+    handler: short.handler
+    runtime: python3.6
+    events:
+      - http: post /v1/urls
+  info:
+    handler: info.handler
+    runtime: python3.6
+    events:
+      - http: get /v1/{id}/info
+  expand:
+    handler: expand.handler
+    runtime: python3.6
+    events:
+      - http: get /{id}
+resources:
+  Resources:
+    urls:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.DYNAMODB_URLS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
